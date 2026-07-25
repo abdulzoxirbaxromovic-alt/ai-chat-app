@@ -331,10 +331,11 @@
       const data = await response.json();
       hideTyping();
 
-      if (data.choices && data.choices[0]) {
-        const reply = data.choices[0].message.content;
-        addMessage(reply, 'ai');
-        history.push({ role: "assistant", content: reply });
+      if if (data.choices && data.choices[0]) {
+    let reply = data.choices[0].message.content;
+    reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+    addMessage(reply, 'ai');
+    history.push({ role: "assistant", content: reply }) ;
       } else {
         addMessage("Xatolik: javob olinmadi. Qaytadan urinib ko'ring.", 'ai');
       }
