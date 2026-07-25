@@ -107,6 +107,52 @@
     border-top: 1px solid rgba(255,255,255,0.06);
   }
 
+  #attachBtn, #genImageBtn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: #7d8b99;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  #attachBtn:active, #genImageBtn:active { opacity: 0.6; }
+
+  #imagePreviewBar {
+    display: none;
+    padding: 8px 12px 0 12px;
+    background: var(--tg-theme-secondary-bg-color, #17212b);
+  }
+  #imagePreviewBar.active { display: flex; align-items: center; gap: 8px; }
+  #imagePreviewBar img {
+    width: 52px;
+    height: 52px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+  #imagePreviewBar .removeImg {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .msg img.chatImage {
+    max-width: 100%;
+    border-radius: 12px;
+    display: block;
+    margin-bottom: 6px;
+  }
+
   #textInput {
     flex: 1;
     border: none;
@@ -151,7 +197,15 @@
 
 <div id="messages"></div>
 
+<div id="imagePreviewBar">
+  <img id="previewImg" src="" alt="">
+  <button class="removeImg" id="removeImgBtn">✕</button>
+</div>
+
 <div id="inputBar">
+  <button id="attachBtn" title="Rasm yuklash">📎</button>
+  <button id="genImageBtn" title="Rasm yaratish">🎨</button>
+  <input type="file" id="fileInput" accept="image/*" style="display:none">
   <input type="text" id="textInput" placeholder="Xabar yozing..." autocomplete="off">
   <button id="sendBtn">➤</button>
 </div>
@@ -170,10 +224,38 @@
   const messagesEl = document.getElementById('messages');
   const inputEl = document.getElementById('textInput');
   const sendBtn = document.getElementById('sendBtn');
+  const attachBtn = document.getElementById('attachBtn');
+  const genImageBtn = document.getElementById('genImageBtn');
+  const fileInput = document.getElementById('fileInput');
+  const imagePreviewBar = document.getElementById('imagePreviewBar');
+  const previewImg = document.getElementById('previewImg');
+  const removeImgBtn = document.getElementById('removeImgBtn');
 
   let history = [
     { role: "system", content: "Sen foydali, samimiy AI yordamchisisan. O'zbek tilida javob ber." }
   ];
+
+  let selectedImageBase64 = null;
+
+  attachBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      selectedImageBase64 = e.target.result;
+      previewImg.src = selectedImageBase64;
+      imagePreviewBar.classList.add('active');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  removeImgBtn.addEventListener('click', () => {
+    selectedImageBase64 = null;
+    fileInput.value = '';
+    imagePreviewBar.classList.remove('active');
+  });
 
   function addMessage(text, sender) {
     const div = document.createElement('div');
@@ -200,11 +282,39 @@
 
   async function sendMessage() {
     const text = inputEl.value.trim();
-    if (!text) return;
+    if (!text && !selectedImageBase64) return;
 
-    addMessage(text, 'user');
-    history.push({ role: "user", content: text });
+    const userDiv = document.createElement('div');
+    userDiv.className = 'msg user';
+    if (selectedImageBase64) {
+      const img = document.createElement('img');
+      img.src = selectedImageBase64;
+      img.className = 'chatImage';
+      userDiv.appendChild(img);
+    }
+    if (text) {
+      const textNode = document.createElement('div');
+      textNode.textContent = text;
+      userDiv.appendChild(textNode);
+    }
+    messagesEl.appendChild(userDiv);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    let userContent;
+    if (selectedImageBase64) {
+      userContent = [];
+      if (text) userContent.push({ type: "text", text: text });
+      userContent.push({ type: "image_url", image_url: { url: selectedImageBase64 } });
+    } else {
+      userContent = text;
+    }
+    history.push({ role: "user", content: userContent });
+
     inputEl.value = '';
+    selectedImageBase64 = null;
+    fileInput.value = '';
+    imagePreviewBar.classList.remove('active');
+
     showTyping();
 
     try {
@@ -233,6 +343,39 @@
       addMessage("Tarmoq xatosi: " + err.message, 'ai');
     }
   }
+
+  async function generateImage() {
+    const prompt = inputEl.value.trim();
+    if (!prompt) return;
+
+    addMessage(prompt, 'user');
+    inputEl.value = '';
+    showTyping();
+
+    const encodedPrompt = encodeURIComponent(prompt);
+    const seed = Math.floor(Math.random() * 1000000);
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&nologo=true`;
+
+    const img = new Image();
+    img.onload = () => {
+      hideTyping();
+      const div = document.createElement('div');
+      div.className = 'msg ai';
+      const imgEl = document.createElement('img');
+      imgEl.src = imageUrl;
+      imgEl.className = 'chatImage';
+      div.appendChild(imgEl);
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    };
+    img.onerror = () => {
+      hideTyping();
+      addMessage("Rasm yaratishda xatolik yuz berdi. Qaytadan urinib ko'ring.", 'ai');
+    };
+    img.src = imageUrl;
+  }
+
+  genImageBtn.addEventListener('click', generateImage);
 
   sendBtn.addEventListener('click', sendMessage);
   inputEl.addEventListener('keypress', (e) => {
