@@ -331,7 +331,7 @@
       const data = await response.json();
       hideTyping();
 
-      if if (data.choices && data.choices[0]) {
+      if  (data.choices && data.choices[0]) {
     let reply = data.choices[0].message.content;
     reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
     addMessage(reply, 'ai');
