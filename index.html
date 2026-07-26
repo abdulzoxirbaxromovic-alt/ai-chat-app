@@ -19,26 +19,37 @@
 
   #header {
     padding: 14px 16px;
-    background: var(--tg-theme-secondary-bg-color, #17212b);
+    background: linear-gradient(135deg, rgba(43,156,255,0.12), var(--tg-theme-secondary-bg-color, #17212b) 60%);
     display: flex;
     align-items: center;
     gap: 10px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(10px);
   }
 
   #header .avatar {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: linear-gradient(135deg, #6ab3f3, #2b9cff);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 19px;
+    overflow: hidden;
+    box-shadow: 0 0 0 2px rgba(43,156,255,0.25), 0 2px 8px rgba(0,0,0,0.25);
   }
 
-  #header .title { font-weight: 600; font-size: 16px; }
-  #header .subtitle { font-size: 12px; color: #7d8b99; }
+  #header .title { font-weight: 600; font-size: 16px; letter-spacing: -0.2px; }
+  #header .subtitle { font-size: 12px; color: #7d8b99; display: flex; align-items: center; gap: 4px; }
+  #header .subtitle::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4cd964;
+    display: inline-block;
+  }
 
   #messages {
     flex: 1;
@@ -57,11 +68,18 @@
     line-height: 1.4;
     word-wrap: break-word;
     white-space: pre-wrap;
+    animation: msgIn 0.25s ease;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  }
+
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   .msg.user {
     align-self: flex-end;
-    background: #2b9cff;
+    background: linear-gradient(135deg, #2ba0ff, #2b7fff);
     color: white;
     border-bottom-right-radius: 4px;
   }
@@ -105,6 +123,7 @@
     padding: 10px 12px;
     background: var(--tg-theme-secondary-bg-color, #17212b);
     border-top: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(10px);
   }
 
   #attachBtn, #genImageBtn {
@@ -120,8 +139,9 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    transition: background 0.15s, transform 0.1s;
   }
-  #attachBtn:active, #genImageBtn:active { opacity: 0.6; }
+  #attachBtn:active, #genImageBtn:active { opacity: 0.6; transform: scale(0.92); background: rgba(255,255,255,0.06); }
 
   #imagePreviewBar {
     display: none;
@@ -169,7 +189,7 @@
     height: 40px;
     border-radius: 50%;
     border: none;
-    background: #2b9cff;
+    background: linear-gradient(135deg, #2ba0ff, #2b7fff);
     color: white;
     font-size: 18px;
     cursor: pointer;
@@ -177,9 +197,11 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(43,156,255,0.35);
+    transition: transform 0.1s;
   }
 
-  #sendBtn:active { opacity: 0.7; }
+  #sendBtn:active { opacity: 0.85; transform: scale(0.92); }
 
   #messages::-webkit-scrollbar { width: 4px; }
   #messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
@@ -188,9 +210,9 @@
 <body>
 
 <div id="header">
-  <div class="avatar"><img src="avatar.png" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"></div>
+  <div class="avatar">🤖</div>
   <div>
-    <div class="title">Abdulzoxir's AI</div>
+    <div class="title">AI Yordamchi</div>
     <div class="subtitle">onlayn</div>
   </div>
 </div>
@@ -232,7 +254,7 @@
   const removeImgBtn = document.getElementById('removeImgBtn');
 
   let history = [
-    { role: "system", content: "Sen juda aqlli, madaniyatli va foydali AI yordamchisan. Foydalanuvchining barcha savollariga o'zbek tilida aniq, to'g'ri va chuqur ma'noli (batafsil) javob ber. Suhbatni qiziqarli va samimiy qilish uchun gaplaringda mavzuga mos turli emojilardan (masalan, 😃, 🤔, ✨, 👍) faol foydalan. Javoblaring doim yozish qoidalariga mos va tushunarli bo'lsin." }
+    { role: "system", content: "Sen foydali, samimiy AI yordamchisisan. O'zbek tilida javob ber." }
   ];
 
   let selectedImageBase64 = null;
@@ -242,14 +264,40 @@
   fileInput.addEventListener('change', () => {
     const file = fileInput.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      selectedImageBase64 = e.target.result;
+    resizeImage(file, (resizedBase64) => {
+      selectedImageBase64 = resizedBase64;
       previewImg.src = selectedImageBase64;
       imagePreviewBar.classList.add('active');
+    });
+  });
+
+  function resizeImage(file, callback) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxSize = 1024;
+        let width = img.width;
+        let height = img.height;
+        if (width > height && width > maxSize) {
+          height = Math.round(height * (maxSize / width));
+          width = maxSize;
+        } else if (height > maxSize) {
+          width = Math.round(width * (maxSize / height));
+          height = maxSize;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const resizedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        callback(resizedBase64);
+      };
+      img.src = e.target.result;
     };
     reader.readAsDataURL(file);
-  });
+  }
 
   removeImgBtn.addEventListener('click', () => {
     selectedImageBase64 = null;
@@ -284,25 +332,24 @@
     const text = inputEl.value.trim();
     if (!text && !selectedImageBase64) return;
 
+    // Foydalanuvchi xabarini chatda ko'rsatish
     const userDiv = document.createElement('div');
     userDiv.className = 'msg user';
-
     if (selectedImageBase64) {
       const img = document.createElement('img');
       img.src = selectedImageBase64;
       img.className = 'chatImage';
       userDiv.appendChild(img);
     }
-
     if (text) {
       const textNode = document.createElement('div');
       textNode.textContent = text;
       userDiv.appendChild(textNode);
     }
-
     messagesEl.appendChild(userDiv);
     messagesEl.scrollTop = messagesEl.scrollHeight;
 
+    // AI uchun xabar tarkibini tayyorlash
     let userContent;
     if (selectedImageBase64) {
       userContent = [];
@@ -335,16 +382,7 @@
       hideTyping();
 
       if (data.choices && data.choices[0]) {
-        let reply = data.choices[0].message.content;
-
-        reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, "");
-        reply = reply.replace(/<think>[\s\S]*$/gi, "");
-        reply = reply.trim();
-
-        if (!reply) {
-          reply = "Kechirasiz, javobni to'liq generatsiya qila olmadim. Qaytadan urinib ko'ring.";
-        }
-
+        const reply = data.choices[0].message.content;
         addMessage(reply, 'ai');
         history.push({ role: "assistant", content: reply });
       } else {
@@ -368,6 +406,7 @@
     const seed = Math.floor(Math.random() * 1000000);
     const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&nologo=true`;
 
+    // Rasmni oldindan yuklab, tayyor bo'lguncha kutamiz
     const img = new Image();
     img.onload = () => {
       hideTyping();
