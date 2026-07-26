@@ -286,17 +286,20 @@
 
     const userDiv = document.createElement('div');
     userDiv.className = 'msg user';
+
     if (selectedImageBase64) {
       const img = document.createElement('img');
       img.src = selectedImageBase64;
       img.className = 'chatImage';
       userDiv.appendChild(img);
     }
+
     if (text) {
       const textNode = document.createElement('div');
       textNode.textContent = text;
       userDiv.appendChild(textNode);
     }
+
     messagesEl.appendChild(userDiv);
     messagesEl.scrollTop = messagesEl.scrollHeight;
 
@@ -331,16 +334,19 @@
       const data = await response.json();
       hideTyping();
 
-     if (data.choices && data.choices[0]) {
+      if (data.choices && data.choices[0]) {
         let reply = data.choices[0].message.content;
 
+        reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, "");
+        reply = reply.replace(/<think>[\s\S]*$/gi, "");
+        reply = reply.trim();
 
-reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, "");
-reply = reply.replace(/<think>[\s\S]*$/gi, "");
-reply = reply.trim();
-if (!reply) {
-    reply = "Kechirasiz, javobni to'liq generatsiya qila olmadim. Qaytadan urinib ko'ring.";
-}
+        if (!reply) {
+          reply = "Kechirasiz, javobni to'liq generatsiya qila olmadim. Qaytadan urinib ko'ring.";
+        }
+
+        addMessage(reply, 'ai');
+        history.push({ role: "assistant", content: reply });
       } else {
         addMessage("Xatolik: javob olinmadi. Qaytadan urinib ko'ring.", 'ai');
       }
