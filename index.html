@@ -331,11 +331,20 @@
       const data = await response.json();
       hideTyping();
 
-      if  (data.choices && data.choices[0]) {
-    let reply = data.choices[0].message.content;
-    reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-    addMessage(reply, 'ai');
-    history.push({ role: "assistant", content: reply }) ;
+     if let reply = data.choices[0].message.content;
+
+// To'liq yopilgan <think>...</think> larni olib tashlash
+reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, "");
+
+// Agar <think> ochilib, yopilmagan bo'lsa (uzilib qolgan javob) — undan keyingi hammasini olib tashlaymiz
+reply = reply.replace(/<think>[\s\S]*$/gi, "");
+
+reply = reply.trim();
+
+// Agar tozalashdan keyin hech narsa qolmasa, foydalanuvchiga xabar beramiz
+if (!reply) {
+    reply = "Kechirasiz, javobni to'liq generatsiya qila olmadim. Qaytadan urinib ko'ring.";
+}
       } else {
         addMessage("Xatolik: javob olinmadi. Qaytadan urinib ko'ring.", 'ai');
       }
