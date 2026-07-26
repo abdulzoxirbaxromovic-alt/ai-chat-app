@@ -386,7 +386,8 @@
         addMessage(reply, 'ai');
         history.push({ role: "assistant", content: reply });
       } else {
-        addMessage("Xatolik: javob olinmadi. Qaytadan urinib ko'ring.", 'ai');
+        const errMsg = data.error?.message || JSON.stringify(data).slice(0, 300);
+        addMessage("Xatolik: " + errMsg, 'ai');
       }
     } catch (err) {
       hideTyping();
